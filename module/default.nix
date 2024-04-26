@@ -41,7 +41,7 @@
 
   installSecrets = pkgs.writeShellApplication {
     name = "kawari-install-secrets";
-    runtimeInputs = [pkgs.envsubst kawariSubst];
+    runtimeInputs = [pkgs.envsubst pkgs.coreutils kawariSubst];
     text = ''
       # clean dirs
       SECRETS_DIR="$XDG_RUNTIME_DIR/kawari-nix/secrets"
