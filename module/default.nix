@@ -117,5 +117,19 @@ in {
       };
       Install.WantedBy = ["default.target"];
     };
+
+    home.activation.kawari-nix = let
+      systemctl = config.systemd.user.systemctlPath;
+    in ''
+      systemdStatus=$(${systemctl} --user is-system-running 2>&1 || true)
+
+      if [[ $systemdStatus == 'running' ]]; then
+        ${systemctl} restart --user kawari-nix
+      else
+        echo "User systemd daemon not running. Probably executed on boot where no manual start/reload is needed."
+      fi
+
+      unset systemdStatus
+    '';
   };
 }
