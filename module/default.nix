@@ -19,9 +19,6 @@
         type = lib.types.path;
         default = "${pkgs.writeText "kawari-template-${name}" cfg.template."${name}".content}";
       };
-      envFile = lib.mkOption {
-        type = lib.types.path;
-      };
       path = lib.mkOption {
         type = lib.types.path;
         default = "${cfg.defaultPath}/secrets/${name}";
@@ -36,7 +33,7 @@
   kawariSubst = pkgs.buildGoModule {
     name = "kawari-subst";
     src = ../script;
-    vendorHash = "sha256-nnJCCKzlKIZmNBSrX9FejDHCvhSdChepQU9Pl0hbIaw=";
+    vendorHash = null;
   };
 
   installSecrets = pkgs.writeShellApplication {
@@ -60,7 +57,7 @@
     */
     ''
       # subsitute and link
-      kawari-subst "${value.contentPath}" "${value.envFile}" > "$SECRETS_DIR/${name}"
+      kawari-subst "${value.contentPath}" > "$SECRETS_DIR/${name}"
       mkdir -p "$(dirname -- "${value.path}")"
       ln -sf "$SECRETS_DIR/${name}" "${value.path}"
       ${lib.concatStrings (lib.lists.forEach value.linkTo (x:
@@ -93,18 +90,12 @@ in {
   };
 
   config = {
-    assertions =
-      (lib.attrsets.attrValues (builtins.mapAttrs (tName: tConfig: {
-          assertion = tConfig.envFile != null;
-          message = ''kawari.template."${tName}".envFile not defined'';
-        })
-        cfg.template))
-      ++ [
-        {
-          assertion = allUniqueValues allLinksPaths;
-          message = "collision in kawari template path or linkTo";
-        }
-      ];
+    assertions = [
+      {
+        assertion = allUniqueValues allLinksPaths;
+        message = "collision in kawari template path or linkTo";
+      }
+    ];
 
     systemd.user.services.kawari-nix = {
       Unit = {

@@ -2,34 +2,48 @@ package main
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
-
-	envp "github.com/hashicorp/go-envparse"
 )
+
+func trySubst(placeholder string) (string, bool) {
+	if len(placeholder) < 84 || placeholder[0:7] != "KAWARI:" || placeholder[len(placeholder)-12:] != ":PLACEHOLDER" {
+		return "", false
+	}
+
+	path := placeholder[72 : len(placeholder)-12]
+	hash := placeholder[7:71]
+
+	calculatedhash := fmt.Sprintf("%x", sha256.Sum256([]byte("kawari+"+path)))
+
+	if hash != calculatedhash {
+		return "", false
+	}
+
+	secretfile, err := os.Open(path)
+	if err != nil {
+		return "", false
+	}
+
+	secret, err := io.ReadAll(secretfile)
+	if err != nil {
+		return "", false
+	}
+
+	return string(secret), true
+}
 
 func main() {
 	args := os.Args[1:]
 
-	if len(args) < 2 {
+	if len(args) < 1 {
 		fmt.Println("Not enough arguments")
 		os.Exit(1)
 	}
 
 	templatepath := args[0]
-	envfilepath := args[1]
-
-	envfile, err := os.Open(envfilepath)
-	if err != nil {
-		fmt.Println("Couldn't open env file")
-		os.Exit(1)
-	}
-
-	envvalues, err := envp.Parse(envfile)
-	if err != nil {
-		fmt.Println("Malformed env file")
-		os.Exit(1)
-	}
 
 	templatefile, err := os.Open(templatepath)
 	if err != nil {
@@ -52,7 +66,7 @@ loop1:
 				ch := scanner.Text()
 
 				if ch == "@" {
-					val, ok := envvalues[varfound]
+					val, ok := trySubst(varfound)
 					if ok {
 						res += val
 					} else {

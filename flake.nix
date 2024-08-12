@@ -1,5 +1,5 @@
 {
-  description = "Home manager module to create templates from environment files";
+  description = "Home manager module to fill templates with secrets";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -25,6 +25,8 @@
     };
 
     homeManagerModule = homeManagerModules.kawari;
+
+    placeholder = path: "@KAWARI:${builtins.hashString "sha256" "kawari+${path}"}:${path}:PLACEHOLDER@";
 
     devShells = forEachSystem (pkgs: {
       default = pkgs.mkShell {

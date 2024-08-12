@@ -1,6 +1,6 @@
 # kawari-nix
 
-[Home manager](https://github.com/nix-community/home-manager) module to embed variables (usually secrets) into a text file for configuration.
+[Home manager](https://github.com/nix-community/home-manager) module to embed a file content (usually secrets) into a text file at system/home-manager activation.
 
 This project was made because [sops-nix](https://github.com/Mic92/sops-nix) doesn't support template files when used as a home manager module
 
@@ -29,6 +29,7 @@ Import the home-manager module
   ];
 }
 ```
+
 ```nix
 {
   # Configuration via home.nix
@@ -41,20 +42,25 @@ Import the home-manager module
 ## Usage
 
 Here is an example usage with [sops-nix](https://github.com/Mic92/sops-nix)
+
 ```nix
 kawari.template."example-app" = {
-  content = /* toml */ ''
-    password = "@PASSWORD@"
+  # you can pass a path to the function kawari.placeholder to include it's content at activation
+  content = ''
+    password = "${inputs.kawari.placeholder config.sops.secrets.password.path}"
   '';
-  envFile = config.sops.secrets.your-secret.path; # env file, example: PASSWORD=your-password
-  path = "${config.xdg.configHome}/kawari-nix/secrets/example-app"; # this is the default value, you can change this if you want to link the resulting file on another location
-  linkTo = []; # or you can specify other locations to link to
-};
+  # alternatively you can specify the template file path
+  contentPath = "${config.xdg.configHome}/example-app/config.toml"
+  # where the result will be linked to, this is the default value
+  path = "${config.xdg.configHome}/kawari-nix/secrets/example-app";
+  # you can specify other locations to link to
+  linkTo = []; };
 ```
 
 ## Configuration
 
 You can change the default directory of the links
+
 ```nix
 kawari.defaultPath = "${config.xdg.configHome}/kawari-nix" # default value
 ```
