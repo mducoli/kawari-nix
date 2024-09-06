@@ -54,7 +54,8 @@ kawari.template."example-app" = {
   # where the result will be linked to, this is the default value
   path = "${config.xdg.configHome}/kawari-nix/secrets/example-app";
   # you can specify other locations to link to
-  linkTo = []; };
+  linkTo = [];
+};
 ```
 
 ## Configuration
@@ -62,5 +63,5 @@ kawari.template."example-app" = {
 You can change the default directory of the links
 
 ```nix
-kawari.defaultPath = "${config.xdg.configHome}/kawari-nix" # default value
+kawari.defaultPath = "${config.xdg.configHome}/kawari-nix"; # default value
 ```
