@@ -23,10 +23,6 @@
         type = lib.types.path;
         default = "${cfg.defaultPath}/secrets/${name}";
       };
-      linkTo = lib.mkOption {
-        type = lib.types.listOf lib.types.path;
-        default = [];
-      };
     };
   });
 
@@ -41,11 +37,9 @@
     runtimeInputs = [pkgs.envsubst pkgs.coreutils kawariSubst];
     text = ''
       # clean dirs
-      SECRETS_DIR="$XDG_RUNTIME_DIR/kawari-nix/secrets"
+      SECRETS_DIR="${cfg.defaultPath}/secrets.d"
       if [ -d "$SECRETS_DIR" ]; then rm -r "$SECRETS_DIR"; fi
       mkdir -p "$SECRETS_DIR"
-      LINKS_DIR="${cfg.defaultPath}/secrets"
-      if [ -d "$LINKS_DIR" ]; then rm -r "$LINKS_DIR"; fi
 
       ${forEachTemplate}
     '';
@@ -56,31 +50,23 @@
     bash
     */
     ''
-      # subsitute and link
+      # subsitute
+      mkdir -p "$(dirname -- "$SECRETS_DIR/${name}")"
       kawari-subst "${value.contentPath}" > "$SECRETS_DIR/${name}"
+      # link
       mkdir -p "$(dirname -- "${value.path}")"
       ln -sf "$SECRETS_DIR/${name}" "${value.path}"
-      ${lib.concatStrings (lib.lists.forEach value.linkTo (x:
-        /*
-        bash
-        */
-        ''
-          # create additional links
-          linkDest="${x}"
-          mkdir -p "$(dirname -- "$linkDest")"
-          ln -sf "$SECRETS_DIR/${name}" "$linkDest"
-        ''))}
     '')
   cfg.template));
 
   allUniqueValues = list: (builtins.length list) == (builtins.length (lib.lists.unique list));
 
-  allLinksPaths = builtins.concatLists (lib.attrsets.attrValues (builtins.mapAttrs (k: v: (lib.lists.unique (v.linkTo ++ [v.path]))) cfg.template));
+  allLinkPaths = lib.attrsets.mapAttrsToList (k: v: v.path) cfg.template;
 in {
   options.kawari = {
     defaultPath = lib.mkOption {
       type = lib.types.path;
-      default = "${config.xdg.configHome}/kawari-nix";
+      default = "/run/kawari-nix";
     };
 
     template = lib.mkOption {
@@ -92,35 +78,21 @@ in {
   config = {
     assertions = [
       {
-        assertion = allUniqueValues allLinksPaths;
-        message = "collision in kawari template path or linkTo";
+        assertion = allUniqueValues allLinkPaths;
+        message = "Collision in kawari template path";
       }
     ];
 
-    systemd.user.services.kawari-nix = {
-      Unit = {
-        Description = "kawari-nix activation";
-        After = ["sops-nix.service"]; # for compatibility
-      };
-      Service = {
+    systemd.services.kawari-install-secrets = {
+      wantedBy = ["sysinit.target"];
+      after = ["systemd-sysusers.service"];
+      unitConfig.DefaultDependencies = "no";
+
+      serviceConfig = {
         Type = "oneshot";
-        ExecStart = lib.getExe installSecrets;
+        ExecStart = ["${lib.getExe installSecrets}"];
+        RemainAfterExit = true;
       };
-      Install.WantedBy = ["default.target"];
     };
-
-    home.activation.kawari-nix = let
-      systemctl = config.systemd.user.systemctlPath;
-    in ''
-      systemdStatus=$(${systemctl} --user is-system-running 2>&1 || true)
-
-      if [[ $systemdStatus == 'running' ]]; then
-        ${systemctl} restart --user kawari-nix
-      else
-        echo "User systemd daemon not running. Probably executed on boot where no manual start/reload is needed."
-      fi
-
-      unset systemdStatus
-    '';
   };
 }

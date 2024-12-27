@@ -20,11 +20,16 @@
       });
   in rec {
     homeManagerModules = rec {
-      kawari = import ./module;
+      kawari = import ./module/home-manager.nix;
       default = kawari;
     };
+    homeManagerModule = homeManagerModules.default;
 
-    homeManagerModule = homeManagerModules.kawari;
+    nixosModules = rec {
+      kawari = import ./module/nixos.nix;
+      default = kawari;
+    };
+    nixosModule = nixosModules.default;
 
     placeholder = path: "@KAWARI:${builtins.hashString "sha256" "kawari+${path}"}:${path}:PLACEHOLDER@";
 
