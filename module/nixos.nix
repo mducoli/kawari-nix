@@ -34,7 +34,7 @@
 
   installSecrets = pkgs.writeShellApplication {
     name = "kawari-install-secrets";
-    runtimeInputs = [pkgs.envsubst pkgs.coreutils kawariSubst];
+    runtimeInputs = [pkgs.coreutils kawariSubst];
     text = ''
       # clean dirs
       SECRETS_DIR="${cfg.defaultPath}/secrets.d"
@@ -69,6 +69,11 @@ in {
       default = "/run/kawari-nix";
     };
 
+    restartTriggers = lib.mkOption {
+      type = lib.types.listOf lib.types.anything;
+      default = [];
+    };
+
     template = lib.mkOption {
       type = lib.types.attrsOf templateType;
       default = {};
@@ -87,6 +92,7 @@ in {
       wantedBy = ["sysinit.target"];
       after = ["systemd-sysusers.service"];
       unitConfig.DefaultDependencies = "no";
+      inherit (cfg) restartTriggers;
 
       serviceConfig = {
         Type = "oneshot";

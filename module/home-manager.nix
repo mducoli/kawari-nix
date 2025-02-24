@@ -34,7 +34,7 @@
 
   installSecrets = pkgs.writeShellApplication {
     name = "kawari-install-secrets";
-    runtimeInputs = [pkgs.envsubst pkgs.coreutils kawariSubst];
+    runtimeInputs = [pkgs.coreutils kawariSubst];
     text = ''
       # clean dirs
       SECRETS_DIR="$XDG_RUNTIME_DIR/kawari-nix/secrets.d"
@@ -101,7 +101,7 @@ in {
     in ''
       systemdStatus=$(${systemctl} --user is-system-running 2>&1 || true)
 
-      if [[ $systemdStatus == 'running' ]]; then
+      if [[ $systemdStatus == 'running' || $systemdStatus == 'degraded' ]]; then
         ${systemctl} restart --user kawari-nix
       else
         echo "User systemd daemon not running. Probably executed on boot where no manual start/reload is needed."
